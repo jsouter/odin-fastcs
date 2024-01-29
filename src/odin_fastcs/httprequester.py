@@ -6,61 +6,10 @@ import asyncio
 from fastcs.controller import Controller
 from typing import Any
 from fastcs.connections import DisconnectedError
+from fastcs.mapping import Mapping
+from fastcs.backends.epics.backend import EpicsBackend
+from odin_fastcs.odin_controller import OdinController, OdinHandler
 
-
-class DisconnectedHTTPConnection:
-    def __init__(self, *args, **kwargs):
-        ...
-
-    async def get(self, *args, **kwargs) -> str:
-        raise DisconnectedError("No HTTP connection established")
-
-    async def put(self, *args, **kwargs):
-        raise DisconnectedError("No HTTP connection established")
-
-    async def close(self):
-        ...
-
-
-class OdinController(Controller):
-    def __init__(self, settings: IPConnectionSettings):
-        super(OdinController, self).__init__()
-        self._ip_settings = settings
-        self.connection = DisconnectedHTTPConnection()
-
-    async def connect(self) -> None:
-        self.connection = HTTPConnection(
-            self._ip_settings, headers={"Content-Type": None}
-        )
-
-
-@dataclass
-class OdinHandler:
-    controller: OdinController
-    name: str
-    update_period: float = 0.2
-
-    async def put(
-        self,
-        # attr: AttrW,
-        value: Any,
-    ) -> None:
-        try:
-            response = await self.controller.connection.put(self.name)
-            # await attr.set(response["value"])
-            # how do we get the attr from the controller?
-        except Exception as e:
-            print(f"update loop failed:{e}")
-
-    async def update(
-        self,
-        # attr: AttrR,
-    ) -> None:
-        try:
-            response = await self.controller.connection.get(self.name)
-            # await attr.set(response["value"])
-        except Exception as e:
-            print(f"update loop failed:{e}")
 
 
 async def main():
@@ -92,9 +41,7 @@ async def main():
                 if "type" in blob and blob["type"] in types:
                     subtree[part] = attr_class(
                         types[blob["type"]],
-                        handler=OdinHandler(controller, "api/0.1/merlin/" + key),
-                    # how can we set the handler to be the connection?
-                    # I guess we pass it the controller but then it gets a bit weird and circular
+                        handler=OdinHandler("api/0.1/merlin/" + key),
                     )  # not generic enough, obviously
                 else:
                     print("hmm something went wrong, fix this code", key_parts, blob)
@@ -122,9 +69,15 @@ async def main():
     recurse_tree(inverse_tree)
     # print(debug_names)
 
-    # see FastCS itself, Handler put and update SHOULD, i.e. MUST accept controller and attr as arguments
-    # await controller.num_exposures.updater.update()
-    # print(controller.num_exposures.updater.name)
+    FPparams = (await controller.connection.get("api/0.1/fp/config/params"))
+    print(FPparams)
+
+
+    mapping = Mapping(controller)
+    backend = EpicsBackend(mapping)
+    backend.create_gui()
+    ioc = backend.get_ioc()
+    ioc.run()
     await controller.connection.close()
 
 
