@@ -7,9 +7,10 @@ from fastcs.controller import Controller
 from typing import Any
 from fastcs.connections import DisconnectedError
 from odin_fastcs.http_connection import HTTPConnection
+from fastcs.wrappers import command, scan
 import logging
 from fastcs.attributes import Handler
-from odin_fastcs.util import flatten_dict, disambiguate
+from odin_fastcs.util import flatten_dict, disambiguate, disambiguate_param_tree
 types = {"float": Float(), "int": Int(), "bool": Bool(), "str": String()}
 
 @dataclass
@@ -95,15 +96,27 @@ class OdinController(Controller):
     async def _connect_parameter_tree(self):
         # should use disambiguate here too?
         response = await self.connection.get(self._prefix + "/config/param_tree")
-        for path, metadata in response["value"].items():
-            settable_path = "_".join(path.split("/"))
-            attr_class = AttrR
+        output = disambiguate_param_tree(response["value"], "/")
+        for param, entry in output.items():
+            full_path, metadata = entry
             if "writeable" in metadata and metadata["writeable"]:
                 attr_class = AttrRW
+            else:
+                attr_class = AttrR
             attr = attr_class(types[metadata["type"]],
-                            handler=ParamTreeHandler(self._prefix + "/" + path))
-            setattr(self, settable_path, attr)
+                              handler=ParamTreeHandler(self._prefix + "/" + full_path))
+            attr_name = self._process_prefix + "_" + param
+            setattr(self, attr_name, attr)
+        # for path, metadata in response["value"].items():
+        #     settable_path = "_".join(path.split("/"))
+        #     attr_class = AttrR
+        #     if "writeable" in metadata and metadata["writeable"]:
+        #         attr_class = AttrRW
+        #     attr = attr_class(types[metadata["type"]],
+        #                     handler=ParamTreeHandler(self._prefix + "/" + path))
+        #     setattr(self, settable_path, attr)
     
+
     async def _connect_process_params(self):
         # from C++ client
         response = await self.connection.get(self._prefix + "/config/client_params")
@@ -125,6 +138,11 @@ class OdinController(Controller):
                 settable_path = f"{prefix}_{param}"
                 setattr(self, settable_path, attr)
 
+    @scan(0.2)
+    @command()
+    async def _update_configuration(self):
+        response = await self.connection.get(self._prefix + "/config/client_params")
+        self._cached_config_params = flatten_dict(response["value"]) # this is probably pretty slow!!!
 
 
 
