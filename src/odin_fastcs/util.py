@@ -11,7 +11,8 @@ def disambiguate(things, separator):
     inverse_tree = {}
     # this now works but is very ugly
     for key, val in output.items():
-        key_parts = key.lower().split(separator)[::-1]
+        # key_parts = key.lower().split(separator)[::-1]
+        key_parts = key.split(separator)[::-1]
         subtree = inverse_tree
         np = len(key_parts)
         for idx, part in enumerate(key_parts):
@@ -39,12 +40,14 @@ def is_metadata_object(d):
     return "writeable" in d and "type" in d
 
 # accepts a flattened dict with underscore separators??
-def disambiguate_param_tree(things, separator): # nasty, should try and make this more uniform
+def disambiguate_param_tree(things, separator):
+    # nasty, should try and make this more uniform
     output = dict(things)
     inverse_tree = {}
     # this now works but is very ugly
     for key, val in output.items():
-        key_parts = key.lower().split(separator)[::-1]
+        # key_parts = key.lower().split(separator)[::-1]
+        key_parts = key.split(separator)[::-1]
         subtree = inverse_tree
         np = len(key_parts)
         for idx, part in enumerate(key_parts):
@@ -53,6 +56,7 @@ def disambiguate_param_tree(things, separator): # nasty, should try and make thi
             if idx + 1 == np:
                 subtree[part] = val
             subtree = subtree[part]
+    # need a better name than degeneracy lol
     def recurse_tree(tree, name_parts=[], degeneracy=1, mapping={}):
         for part, subtree in tree.items():
             name = [part] + name_parts

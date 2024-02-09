@@ -85,7 +85,6 @@ class HTTPConnection:
             json=value,
             headers={"Content-Type": "application/json"},
         ) as response:
-            print(response)
             return await response.json()
 
     async def close(self):
