@@ -28,7 +28,7 @@ class ParamTreeHandler(Handler):
             if self.allowed_values and value in self.allowed_values:
                 print(f"Setting {self.path} to {type(value)} {value} / {self.allowed_values[value]}")
                 # now what do we do with this information
-            response = await controller.connection.put(self.path, value)
+            response = await controller._connection.put(self.path, value)
             # print(self.path, response)
             await attr.set(response["value"])
             # how do we get the attr from the controller?
@@ -41,7 +41,7 @@ class ParamTreeHandler(Handler):
         attr: AttrR,
     ) -> None:
         try:
-            response = await controller.connection.get(self.path)
+            response = await controller._connection.get(self.path)
             value = response["value"]
             await attr.set(value)
         except Exception as e:
@@ -74,26 +74,35 @@ class DisconnectedHTTPConnection:
     async def close(self):
         ...
 
+class OdinTopController(Controller):
+    """
+    Connects all sub controllers on connect
+    """
+    async def connect(self) -> None:
+        for controller in self.get_sub_controllers():
+            await controller.connect()
+
 class OdinController(Controller):
     def __init__(self, settings: IPConnectionSettings, api_prefix: str, process_prefix: str, param_tree=False, process_params=False):
         super(OdinController, self).__init__()
         self._ip_settings = settings
         self._api_prefix = api_prefix
-        self.connection = DisconnectedHTTPConnection()
+        self._connection = DisconnectedHTTPConnection()
         self._process_prefix = process_prefix
         self._path = process_prefix
         self._cached_config_params = {}
         # used to determine if we need to connect the param tree or C++ params
         self._param_tree = param_tree
         self._process_params = process_params
+        asyncio.run(self.initialise())
 
-    async def connect(self) -> None:
-        self.connection = HTTPConnection(
+    async def initialise(self) -> None:
+        self._connection = HTTPConnection(
             # self._ip_settings, headers={"Content-Type": None}
             # self._ip_settings, headers={"Content-Type": "application/json"}
             self._ip_settings.ip, self._ip_settings.port
         )
-        self.connection.open()
+        self._connection.open()
         if self._api_prefix is None:
             logging.warning("No HTTP prefix provided")
             return
@@ -101,11 +110,16 @@ class OdinController(Controller):
             await self._connect_parameter_tree()
         if self._process_params:
             await self._connect_process_params()  # this will fail with merlin
-        # await self.connection.close()
+        await self._connection.close()
+
+    async def connect(self) -> None:
+        for controller in self.get_sub_controllers():
+            await controller.connect()
+        self._connection.open()
 
     async def _connect_parameter_tree(self):
         # should use disambiguate here too?
-        response = await self.connection.get(self._api_prefix + "/config/param_tree")
+        response = await self._connection.get(self._api_prefix + "/config/param_tree")
         output = disambiguate_param_tree(response["value"], "/")
         existing_members = dir(self)
         for param, entry in output.items():
@@ -128,7 +142,7 @@ class OdinController(Controller):
 
     async def _connect_process_params(self):
         # from C++ client
-        response = await self.connection.get(self._api_prefix + "/config/client_params")
+        response = await self._connection.get(self._api_prefix + "/config/client_params")
         self._cached_config_params = flatten_dict(response["value"]) # this is probably pretty slow!!!
         for process, params in response["value"].items():
             if len(response["value"]) > 1:
@@ -154,7 +168,7 @@ class OdinController(Controller):
     @scan(0.2)
     async def _update_configuration(self):
         if self._process_params:
-            response = await self.connection.get(self._api_prefix + "/config/client_params")
+            response = await self._connection.get(self._api_prefix + "/config/client_params")
             self._cached_config_params = flatten_dict(response["value"])
 
         # Should we make a separate block for each FR/FP process??

@@ -8,7 +8,7 @@ from typing import Any
 from fastcs.mapping import Mapping
 from fastcs.controller import Controller
 from . import __version__
-from odin_fastcs.odin_controller import FPOdinController, FROdinController, OdinDetectorController
+from odin_fastcs.odin_controller import FPOdinController, FROdinController, OdinDetectorController, OdinTopController
 from fastcs.backends.epics.ioc import EpicsIOCOptions
 from fastcs.backends.epics.gui import EpicsGUIOptions
 
@@ -16,7 +16,7 @@ __all__ = ["main"]
 
 
 def get_controller() -> FPOdinController:
-    main_cont = Controller()
+    main_cont = OdinTopController()
     frcont = FROdinController(IPConnectionSettings("127.0.0.1", 8888))
     main_cont.register_sub_controller(frcont)
     fpcont = FPOdinController(IPConnectionSettings("127.0.0.1", 8888))
@@ -30,9 +30,6 @@ def get_controller() -> FPOdinController:
 
 def create_backend() -> EpicsBackend:
     cont = get_controller()
-    # asyncio.run(cont.connect())
-    for sub_controller in cont.get_sub_controllers():
-        asyncio.run(sub_controller.connect())
     m = Mapping(cont)
     return EpicsBackend(m)
 
