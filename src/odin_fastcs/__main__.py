@@ -8,7 +8,7 @@ from typing import Any
 from fastcs.mapping import Mapping
 from fastcs.controller import Controller
 from . import __version__
-from odin_fastcs.odin_controller import FPOdinController, FROdinController, OdinDetectorController, OdinTopController
+from odin_fastcs.odin_controller import FPOdinController, FROdinController, OdinDetectorController, OdinTopController, MLOdinController
 from fastcs.backends.epics.ioc import EpicsIOCOptions
 from fastcs.backends.epics.gui import EpicsGUIOptions
 
@@ -21,6 +21,8 @@ def get_controller() -> FPOdinController:
     main_cont.register_sub_controller(frcont)
     fpcont = FPOdinController(IPConnectionSettings("127.0.0.1", 8888))
     main_cont.register_sub_controller(fpcont)
+    mlcont = MLOdinController(IPConnectionSettings("127.0.0.1", 8888))
+    main_cont.register_sub_controller(mlcont)
     # fpmerlin = OdinDetectorController("merlin", IPConnectionSettings("127.0.0.1", 8888))
     # main_cont.register_sub_controller(fpmerlin)
     # only displays one controller at a time... (whichever one gets registered first/last)
