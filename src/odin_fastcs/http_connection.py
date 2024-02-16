@@ -2,6 +2,8 @@ from typing import Dict, Optional, Tuple
 
 from aiohttp import ClientResponse, ClientSession
 
+ValueType = bool | int | float | str
+
 
 class HTTPConnection:
     def __init__(self, ip: str, port: int):
@@ -9,7 +11,7 @@ class HTTPConnection:
         self._ip = ip
         self._port = port
 
-    def full_url(self, uri) -> str:
+    def full_url(self, uri: str) -> str:
         """Expand IP address, port and URI into full URL.
 
         Args:
@@ -40,7 +42,7 @@ class HTTPConnection:
 
         raise ConnectionRefusedError("Session is not open")
 
-    async def get(self, uri) -> Dict[str, str]:
+    async def get(self, uri: str) -> Dict[str, str]:
         """Perform HTTP GET request and return response content as JSON.
 
         Args:
@@ -53,7 +55,7 @@ class HTTPConnection:
         async with session.get(self.full_url(uri)) as response:
             return await response.json()
 
-    async def get_bytes(self, uri) -> Tuple[ClientResponse, bytes]:
+    async def get_bytes(self, uri: str) -> Tuple[ClientResponse, bytes]:
         """Perform HTTP GET request and return response content as bytes.
 
         Args:
@@ -66,7 +68,7 @@ class HTTPConnection:
         async with session.get(self.full_url(uri)) as response:
             return response, await response.read()
 
-    async def put(self, uri, value) -> list[str]:
+    async def put(self, uri: str, value: ValueType) -> list[str]:
         """Perform HTTP PUT request and return response content as json.
 
         If successful, the response is a list of parameters whose values may have
@@ -81,7 +83,6 @@ class HTTPConnection:
         session = self.get_session()
         async with session.put(
             self.full_url(uri),
-            # json={"value": value},
             json=value,
             headers={"Content-Type": "application/json"},
         ) as response:

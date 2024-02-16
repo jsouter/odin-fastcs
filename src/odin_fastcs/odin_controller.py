@@ -89,7 +89,7 @@ class OdinTopController(Controller):
     """
     async def connect(self) -> None:
         for controller in self.get_sub_controllers():
-            await controller.connect()
+            await controller.connect()  # type: ignore
 
 
 class OdinController(Controller):

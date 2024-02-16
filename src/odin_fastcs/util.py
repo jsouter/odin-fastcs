@@ -1,17 +1,24 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Tuple
+
+Checker = Callable[[Any], bool]
 
 
-def is_metadata_object(v):
+def is_metadata_object(v: Any) -> bool:
     return isinstance(v, dict) and "writeable" in v and "type" in v
 
 
-def is_not_dict(v):
+def is_not_dict(v: Any) -> bool:
     return not isinstance(v, dict)
 
 
 # value_checker: method to determine if a dictionary value relates to an actual param
 # value or if it is another dict with params nested inside.
-def flatten_dict(dd, separator="/", prefix="", value_checker=is_not_dict):
+def flatten_dict(
+    dd: Mapping[str, Any],
+    separator: str = "/",
+    prefix: str = "",
+    value_checker: Checker = is_not_dict,
+) -> Dict[str, Any]:
     if not value_checker(dd):
         return {
             prefix + separator + k if prefix else k: v
@@ -22,8 +29,10 @@ def flatten_dict(dd, separator="/", prefix="", value_checker=is_not_dict):
         return {prefix: dd}
 
 
-def unflatten_dict(dd, separator="/", reverse_indexing=False):
-    output = {}
+def unflatten_dict(
+    dd: Dict[str, Any], separator: str = "/", reverse_indexing: bool = False
+) -> Mapping[str, Any]:
+    output: Mapping[str, Any] = {}
     for key, val in dd.items():
         key_parts = key.split(separator)
         if reverse_indexing:
@@ -40,7 +49,7 @@ def unflatten_dict(dd, separator="/", reverse_indexing=False):
 
 
 def map_short_name_to_path_and_value(
-    things, separator, value_checker=is_not_dict
+    things: Mapping[str, Any], separator: str, value_checker: Checker = is_not_dict
 ) -> Dict[str, Tuple[str, Any]]:
     # flattens so that we end up with a dict with keys of api path and values of
     # required metadata needed to construct FastCS Attrs
@@ -49,18 +58,24 @@ def map_short_name_to_path_and_value(
     # together, to make it easier to reduce the path names
     inverse_tree = unflatten_dict(flattened, separator, reverse_indexing=True)
 
-    def get_name_mapping(tree, name_parts=[], degeneracy=1, mapping={}):
+    # come up with better name than parts_needed!
+    def get_name_mapping(
+        tree: Mapping[str, Any],
+        name_parts: List[str] = [],
+        parts_needed: int = 1,
+        mapping: Dict[str, str] = {},
+    ) -> Dict[str, str]:
         for part, subtree in tree.items():
-            name = [part] + name_parts
+            name: List[str] = [part] + name_parts
             if value_checker(subtree):
                 full_name = separator.join(name)
-                short_name = "_".join(name[-degeneracy:])
+                short_name = "_".join(name[-parts_needed:])
                 mapping[full_name] = short_name
             elif isinstance(subtree, dict):
                 get_name_mapping(
-                    subtree,
+                    subtree,  # type: ignore
                     name,
-                    len(name) + 1 if len(subtree.keys()) > 1 else degeneracy,
+                    len(name) + 1 if len(subtree) > 1 else parts_needed,  # type: ignore
                     mapping,
                 )
             else:
@@ -69,7 +84,7 @@ def map_short_name_to_path_and_value(
                 )
         return mapping
 
-    output = {}
+    output: Dict[str, Tuple[str, Any]] = {}
     # there has to be a simpler way to do this...
     for full_name, short_name in get_name_mapping(inverse_tree).items():
         output[short_name] = (full_name, flattened.get(full_name))
