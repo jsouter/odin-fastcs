@@ -17,6 +17,7 @@ types = {"float": Float(), "int": Int(), "bool": Bool(), "str": String()}
 class AdapterResponseError(Exception):
     ...
 
+
 @dataclass
 class ParamTreeHandler(Handler):
     path: str
@@ -107,8 +108,6 @@ class OdinController(Controller):
 
     async def initialise(self) -> None:
         self._connection = HTTPConnection(
-            # self._ip_settings, headers={"Content-Type": None}
-            # self._ip_settings, headers={"Content-Type": "application/json"}
             self._ip_settings.ip, self._ip_settings.port
         )
         self._connection.open()
@@ -128,7 +127,7 @@ class OdinController(Controller):
 
     async def _connect_parameter_tree(self):
         response = await self._connection.get(self._api_prefix + "/config/param_tree")
-        print(response["value"])
+        print(response)
         existing_members = dir(self)
         for param, entry in map_short_name_to_path_and_value(
             response["value"], "/", is_metadata_object
@@ -142,15 +141,16 @@ class OdinController(Controller):
                 print(f"Could not add {param} of type {metadata['type']}!! Considering fixing on Odin end")
                 # this is really something I should handle here
                 continue
-            allowed = {int(k): v for k, v in metadata["allowed_values"].items()} \
-                if "allowed_values" in metadata else None
+            allowed = metadata["allowed_values"] if "allowed_values" in metadata else None 
+            # can be list or dict, TODO figure out how this should work in Odin
             attr = attr_class(types[metadata["type"]],
                               handler=ParamTreeHandler(f"{self._api_prefix}/{full_path}",
                                                        allowed_values=allowed))
             attr_name = self._process_prefix + "_" + param if param in existing_members else param
+            attr_name = attr_name.replace(".", "")
             # instead we should get the next lowest level part of the name, e.g.
             # config/hdf/path becomes hdf_path not fp_path
-            logging.warning("Change attr_name logic! see comment")
+            logging.warning(f"Change attr_name logic! see comment")
             # attr_name = self._process_prefix + "_" + param  # change this
             setattr(self, attr_name, attr)
 
@@ -185,10 +185,6 @@ class OdinController(Controller):
             response = await self._connection.get(self._api_prefix + "/config/client_params")
             self._cached_config_params = flatten_dict(response["value"])
             print('updating cached config params :)')
-
-        # Should we make a separate block for each FR/FP process??
-        # would be nice to pair them up so FR1/FP1 are together, maybe with a split down the middle
-        # or something
 
 
 class FPOdinController(OdinController):

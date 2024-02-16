@@ -23,6 +23,8 @@ def get_controller() -> FPOdinController:
     main_cont.register_sub_controller(fpcont)
     mlcont = MLOdinController(IPConnectionSettings("127.0.0.1", 8888))
     main_cont.register_sub_controller(mlcont)
+    eigercont = OdinDetectorController("eiger", IPConnectionSettings("127.0.0.1", 8888))
+    main_cont.register_sub_controller(eigercont)
     # fpmerlin = OdinDetectorController("merlin", IPConnectionSettings("127.0.0.1", 8888))
     # main_cont.register_sub_controller(fpmerlin)
     # only displays one controller at a time... (whichever one gets registered first/last)
@@ -58,7 +60,7 @@ def main(args=None):
     parser.add_argument("-v", "--version", action="version", version=__version__)
     args = parser.parse_args(args)
     backend = create_backend()
-    prefix = "HQV-EA-MRLN-01"
+    prefix = "HQV-EA-EIG-01"
     create_gui(backend, prefix)
     test_ioc(backend, prefix)
 
