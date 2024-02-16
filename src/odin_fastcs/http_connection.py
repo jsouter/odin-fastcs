@@ -1,8 +1,9 @@
-from typing import Dict, Optional, Tuple
-
+from typing import List, Mapping, Optional, Tuple
 from aiohttp import ClientResponse, ClientSession
 
 ValueType = bool | int | float | str
+JsonElementary = str | int | float | bool | None
+JsonType = JsonElementary | List[JsonElementary] | Mapping[str, JsonElementary]
 
 
 class HTTPConnection:
@@ -42,7 +43,7 @@ class HTTPConnection:
 
         raise ConnectionRefusedError("Session is not open")
 
-    async def get(self, uri: str) -> Dict[str, str]:
+    async def get(self, uri: str) -> JsonType:
         """Perform HTTP GET request and return response content as JSON.
 
         Args:
@@ -68,7 +69,7 @@ class HTTPConnection:
         async with session.get(self.full_url(uri)) as response:
             return response, await response.read()
 
-    async def put(self, uri: str, value: ValueType) -> list[str]:
+    async def put(self, uri: str, value: ValueType) -> JsonType:
         """Perform HTTP PUT request and return response content as json.
 
         If successful, the response is a list of parameters whose values may have
@@ -86,6 +87,7 @@ class HTTPConnection:
             json=value,
             headers={"Content-Type": "application/json"},
         ) as response:
+            print(await response.json())
             return await response.json()
 
     async def close(self):
