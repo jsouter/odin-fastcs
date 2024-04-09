@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 from fastcs.backends.asyncio_backend import AsyncioBackend
 from fastcs.backends.epics.backend import EpicsBackend
-from fastcs.connections import IPConnectionSettings
+from fastcs.connections.ip_connection import IPConnectionSettings
 import asyncio
 from typing import Any
 from fastcs.mapping import Mapping
@@ -11,6 +11,7 @@ from . import __version__
 from odin_fastcs.odin_controller import FPOdinController, FROdinController, OdinDetectorController, OdinTopController, MLOdinController
 from fastcs.backends.epics.ioc import EpicsIOCOptions
 from fastcs.backends.epics.gui import EpicsGUIOptions
+from eiger_fastcs.eiger_controller import EigerController
 
 __all__ = ["main"]
 
@@ -25,6 +26,9 @@ def get_controller() -> FPOdinController:
     main_cont.register_sub_controller(mlcont)
     eigercont = OdinDetectorController("eiger", IPConnectionSettings("127.0.0.1", 8888))
     main_cont.register_sub_controller(eigercont)
+    eigercontv1 = EigerController("127.0.0.1", 8081)
+    main_cont.register_sub_controller(eigercontv1)
+
     # fpmerlin = OdinDetectorController("merlin", IPConnectionSettings("127.0.0.1", 8888))
     # main_cont.register_sub_controller(fpmerlin)
     # only displays one controller at a time... (whichever one gets registered first/last)
@@ -63,6 +67,7 @@ def main(args=None):
     prefix = "HQV-EA-EIG-01"
     create_gui(backend, prefix)
     test_ioc(backend, prefix)
+
 
 # test with: python -m odin_fastcs
 if __name__ == "__main__":

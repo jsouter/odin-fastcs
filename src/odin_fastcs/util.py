@@ -1,5 +1,4 @@
 from typing import Any, Callable, Dict, List, Mapping, Tuple
-
 Checker = Callable[[Any], bool]
 
 
@@ -49,16 +48,15 @@ def unflatten_dict(
 
 
 def map_short_name_to_path_and_value(
-    things: Mapping[str, Any], separator: str, value_checker: Checker = is_not_dict
+    parameters: Mapping[str, Any], separator: str, value_checker: Checker = is_not_dict
 ) -> Dict[str, Tuple[str, Any]]:
     # flattens so that we end up with a dict with keys of api path and values of
     # required metadata needed to construct FastCS Attrs
-    flattened = flatten_dict(things, separator, value_checker=value_checker)
+    flattened = flatten_dict(parameters, separator, value_checker=value_checker)
     # then inverts the tree so that the least significant parts of the path are grouped
     # together, to make it easier to reduce the path names
     inverse_tree = unflatten_dict(flattened, separator, reverse_indexing=True)
 
-    # come up with better name than parts_needed!
     def get_name_mapping(
         tree: Mapping[str, Any],
         name_parts: List[str] = [],
@@ -89,3 +87,13 @@ def map_short_name_to_path_and_value(
     for full_name, short_name in get_name_mapping(inverse_tree).items():
         output[short_name] = (full_name, flattened.get(full_name))
     return output
+
+
+def get_by_path(config: Mapping[str, Any], path: str, delimiter: str = '/') -> Any:
+    parts = path.split('/')
+    if len(parts) == 1:
+        return config[parts[0]]
+    elif parts[0] in config:
+        return get_by_path(config[parts[0]], delimiter.join(parts[1:]))
+    else:
+        raise ValueError(f"Could not retrieve {parts[-1]} from mapping.")

@@ -1,17 +1,20 @@
-from fastcs.connections import IPConnectionSettings
+from fastcs.connections.ip_connection import IPConnectionSettings
 from fastcs.attributes import AttrR, AttrRW, AttrW
 from fastcs.datatypes import Int, Float, Bool, String
 from dataclasses import dataclass
 import asyncio
 from fastcs.controller import Controller
 from typing import Any, Dict, List
-from fastcs.connections import DisconnectedError
-from odin_fastcs.http_connection import HTTPConnection, JsonType, ValueType
+from odin_fastcs.http_connection import (DisconnectedHTTPConnection,
+                                         HTTPConnection,
+                                         JsonElementary,
+                                         JsonType,
+                                         ValueType)
 from fastcs.wrappers import command, scan
 import logging
 from fastcs.attributes import Handler
 from odin_fastcs.util import (
-    flatten_dict,
+    get_by_path,
     map_short_name_to_path_and_value,
     is_not_dict,
     is_metadata_object,
@@ -64,34 +67,10 @@ class OdinConfigurationHandler(Handler):
 
     async def update(self, controller: Any, attr: AttrR[Any]) -> None:
         try:
-            value = controller._cached_config_params[self.path]
+            value = get_by_path(controller._cached_config_params, self.path)
             await attr.set(value)
         except Exception as e:
             print(f"update loop failed: {e}", self.path)
-
-
-class DisconnectedHTTPConnection:
-    def __init__(self, ip: str, port: int):
-        ...
-
-    async def get(self, uri: str) -> JsonType:
-        raise DisconnectedError("No HTTP connection established")
-
-    async def put(self, uri: str, value: ValueType) -> JsonType:
-        raise DisconnectedError("No HTTP connection established")
-
-    async def close(self):
-        ...
-
-
-class OdinTopController(Controller):
-    """
-    Connects all sub controllers on connect
-    """
-
-    async def connect(self) -> None:
-        for controller in self.get_sub_controllers():
-            await controller.connect()  # type: ignore
 
 
 class OdinController(Controller):
@@ -128,12 +107,12 @@ class OdinController(Controller):
 
     async def connect(self) -> None:
         for controller in self.get_sub_controllers():
-            await controller.connect()
+            if isinstance(controller, OdinController):  # to satisfy mypy
+                await controller.connect()
         self._connection.open()
 
     async def _connect_parameter_tree(self):
         response = await self._connection.get(self._api_prefix + "/config/param_tree")
-        print(response)
         existing_members = dir(self)
         for param, entry in map_short_name_to_path_and_value(
             response["value"], "/", is_metadata_object
@@ -145,14 +124,13 @@ class OdinController(Controller):
                 attr_class = AttrR
             if metadata["type"] not in types:
                 print(
-                    f"Could not add {param} of type {metadata['type']}!! Considering fixing on Odin end"
+                    f"Could not add {param} of type {metadata['type']}"
                 )
                 # this is really something I should handle here
                 continue
             allowed = (
                 metadata["allowed_values"] if "allowed_values" in metadata else None
             )
-            # can be list or dict, TODO figure out how this should work in Odin
             attr = attr_class(
                 types[metadata["type"]],
                 handler=ParamTreeHandler(
@@ -165,10 +143,8 @@ class OdinController(Controller):
                 else param
             )
             attr_name = attr_name.replace(".", "")
-            # instead we should get the next lowest level part of the name, e.g.
-            # config/hdf/path becomes hdf_path not fp_path
-            logging.warning("Change attr_name logic! see comment")
-            # attr_name = self._process_prefix + "_" + param  # change this
+            # TODO: instead we should get the next lowest level part of the name, e.g.
+            # config/hdf/path could become hdf_path not fp_path
             setattr(self, attr_name, attr)
 
     async def _connect_process_params(self):
@@ -176,11 +152,7 @@ class OdinController(Controller):
         response = await self._connection.get(
             self._api_prefix + "/config/client_params"
         )
-        # TODO: don't flatten the dict, maybe just use something akin to a parameter tree
-        # recursive search? hard to say which is slower...
-        self._cached_config_params = flatten_dict(
-            response["value"], value_checker=is_not_dict
-        )  # this is probably pretty slow!!!
+        self._cached_config_params = response["value"]
         for process, params in response["value"].items():
             if len(response["value"]) > 1:
                 prefix = f"{self._process_prefix}{int(process) + 1}_"
@@ -198,6 +170,9 @@ class OdinController(Controller):
                 attr = AttrR(  # only readable for time being
                     value_type,
                     handler=OdinConfigurationHandler(f"{process}/{full_path}"),
+                    group=f"{self._process_prefix}{int(process)+1}".capitalize()
+                    # TODO: can we do subgroups? to handle multiple blocks
+                    # when we have e.g. multiple frame processor processes
                 )
                 settable_path = f"{prefix}{param}"
                 setattr(self, settable_path, attr)
@@ -209,8 +184,18 @@ class OdinController(Controller):
             response = await self._connection.get(
                 self._api_prefix + "/config/client_params"
             )
-            self._cached_config_params = flatten_dict(response["value"])
-            print("updating cached config params :)")
+            self._cached_config_params = response["value"]
+
+
+class OdinTopController(Controller):
+    """
+    Connects all sub controllers on connect
+    """
+
+    async def connect(self) -> None:
+        for controller in self.get_sub_controllers():
+            if isinstance(controller, Controller):  # to satisfy mypy
+                await controller.connect()
 
 
 class FPOdinController(OdinController):
