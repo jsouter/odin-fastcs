@@ -5,11 +5,7 @@ from dataclasses import dataclass
 import asyncio
 from fastcs.controller import Controller
 from typing import Any, Dict, List
-from odin_fastcs.http_connection import (DisconnectedHTTPConnection,
-                                         HTTPConnection,
-                                         JsonElementary,
-                                         JsonType,
-                                         ValueType)
+from odin_fastcs.http_connection import HTTPConnection
 from fastcs.wrappers import command, scan
 import logging
 from fastcs.attributes import Handler
@@ -44,7 +40,7 @@ class ParamTreeHandler(Handler):
             if "error" in response:
                 raise AdapterResponseError(response["error"])
         except Exception as e:
-            print(f"put failed: {e}", attr)
+            logging.error(f"put failed: {e}", attr)
 
     async def update(
         self,
@@ -54,10 +50,9 @@ class ParamTreeHandler(Handler):
         try:
             response = await controller._connection.get(self.path)
             value = response["value"]
-            # print(self.path, type(self.path), value)
             await attr.set(value)
         except Exception as e:
-            print(f"update loop failed: {e}", self.path)
+            logging.error(f"update loop failed: {e}", self.path)
 
 
 @dataclass
@@ -70,7 +65,7 @@ class OdinConfigurationHandler(Handler):
             value = get_by_path(controller._cached_config_params, self.path)
             await attr.set(value)
         except Exception as e:
-            print(f"update loop failed: {e}", self.path)
+            logging.error(f"update loop failed: {e}", self.path)
 
 
 class OdinController(Controller):
@@ -85,9 +80,6 @@ class OdinController(Controller):
         super(OdinController, self).__init__()
         self._ip_settings = settings
         self._api_prefix = api_prefix
-        self._connection = DisconnectedHTTPConnection(
-            self._ip_settings.ip, self._ip_settings.port  # is this worth having?
-        )
         self._process_prefix = process_prefix
         self._path = process_prefix
         self._cached_config_params = {}
@@ -123,8 +115,8 @@ class OdinController(Controller):
             else:
                 attr_class = AttrR
             if metadata["type"] not in types:
-                print(
-                    f"Could not add {param} of type {metadata['type']}"
+                logging.warning(
+                    f"Could not add parameter {param} of type {metadata['type']}"
                 )
                 # this is really something I should handle here
                 continue

@@ -1,26 +1,9 @@
 from typing import List, Mapping, Optional, Tuple
 from aiohttp import ClientResponse, ClientSession
-from fastcs.connections.ip_connection import DisconnectedError
 
 ValueType = bool | int | float | str
 JsonElementary = str | int | float | bool | None
 JsonType = JsonElementary | List[JsonElementary] | Mapping[str, JsonElementary]
-
-class DisconnectedHTTPConnection:
-    def __init__(self, ip: str, port: int):
-        ...
-
-    async def get(self, uri: str) -> JsonType:
-        raise DisconnectedError("No HTTP connection established")
-
-    async def put(self, uri: str, value: ValueType) -> JsonType:
-        raise DisconnectedError("No HTTP connection established")
-
-    async def close(self):
-        ...
-
-    def open(self):
-        ...
 
 
 class HTTPConnection:
