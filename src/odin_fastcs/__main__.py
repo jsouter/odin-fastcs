@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 
-from eiger_fastcs.eiger_controller import EigerController
 from fastcs.backends.epics.backend import EpicsBackend
 from fastcs.backends.epics.gui import EpicsGUIOptions
 from fastcs.backends.epics.ioc import EpicsIOCOptions
@@ -11,7 +10,6 @@ from odin_fastcs.odin_controller import (
     FPOdinController,
     FROdinController,
     MLOdinController,
-    OdinDetectorController,
     OdinTopController,
 )
 
@@ -28,10 +26,6 @@ def get_controller() -> FPOdinController:
     main_cont.register_sub_controller(fpcont)
     mlcont = MLOdinController(IPConnectionSettings("127.0.0.1", 8888))
     main_cont.register_sub_controller(mlcont)
-    eigercont = OdinDetectorController("eiger", IPConnectionSettings("127.0.0.1", 8888))
-    main_cont.register_sub_controller(eigercont)
-    eigercontv1 = EigerController("127.0.0.1", 8081)
-    main_cont.register_sub_controller(eigercontv1)
 
     return main_cont
 
