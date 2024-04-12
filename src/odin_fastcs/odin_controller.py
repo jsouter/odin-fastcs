@@ -19,8 +19,7 @@ from odin_fastcs.util import (
 types = {"float": Float(), "int": Int(), "bool": Bool(), "str": String()}
 
 
-class AdapterResponseError(Exception):
-    ...
+class AdapterResponseError(Exception): ...
 
 
 @dataclass
@@ -162,7 +161,7 @@ class OdinController(Controller):
                 attr = AttrR(  # only readable for time being
                     value_type,
                     handler=OdinConfigurationHandler(f"{process}/{full_path}"),
-                    group=f"{self._process_prefix}{int(process)+1}".capitalize()
+                    group=f"{self._process_prefix}{int(process)+1}".capitalize(),
                     # TODO: can we do subgroups? to handle multiple blocks
                     # when we have e.g. multiple frame processor processes
                 )

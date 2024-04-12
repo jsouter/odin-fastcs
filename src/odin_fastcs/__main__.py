@@ -8,7 +8,13 @@ from typing import Any
 from fastcs.mapping import Mapping
 from fastcs.controller import Controller
 from . import __version__
-from odin_fastcs.odin_controller import FPOdinController, FROdinController, OdinDetectorController, OdinTopController, MLOdinController
+from odin_fastcs.odin_controller import (
+    FPOdinController,
+    FROdinController,
+    OdinDetectorController,
+    OdinTopController,
+    MLOdinController,
+)
 from fastcs.backends.epics.ioc import EpicsIOCOptions
 from fastcs.backends.epics.gui import EpicsGUIOptions
 from eiger_fastcs.eiger_controller import EigerController
@@ -40,6 +46,7 @@ def create_backend() -> EpicsBackend:
     cont = get_controller()
     m = Mapping(cont)
     return EpicsBackend(m)
+
 
 def create_gui(backend, prefix) -> None:
     options = EpicsGUIOptions(prefix=prefix)

@@ -1,4 +1,5 @@
 from typing import Any, Callable, Dict, List, Mapping, Tuple
+
 Checker = Callable[[Any], bool]
 
 
@@ -89,8 +90,8 @@ def map_short_name_to_path_and_value(
     return output
 
 
-def get_by_path(config: Mapping[str, Any], path: str, delimiter: str = '/') -> Any:
-    parts = path.split('/')
+def get_by_path(config: Mapping[str, Any], path: str, delimiter: str = "/") -> Any:
+    parts = path.split("/")
     if len(parts) == 1:
         return config[parts[0]]
     elif parts[0] in config:
