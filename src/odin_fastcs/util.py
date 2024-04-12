@@ -33,7 +33,7 @@ def flatten_dict(
 def unflatten_dict(
     dd: dict[str, Any], separator: str = "/", reverse_indexing: bool = False
 ) -> Mapping[str, Any]:
-    output: Mapping[str, Any] = {}
+    output: dict[str, Any] = {}
     for key, val in dd.items():
         key_parts = key.split(separator)
         if reverse_indexing:
@@ -61,9 +61,9 @@ def map_short_name_to_path_and_value(
 
     def get_name_mapping(
         tree: Mapping[str, Any],
-        name_parts: list[str] = None,
+        name_parts: list[str] | None = None,
         parts_needed: int = 1,
-        mapping: dict[str, str] = None,
+        mapping: dict[str, str] | None = None,
     ) -> dict[str, str]:
         if mapping is None:
             mapping = {}

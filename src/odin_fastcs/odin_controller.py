@@ -82,7 +82,7 @@ class OdinController(Controller):
         self._api_prefix = api_prefix
         self._process_prefix = process_prefix
         self._path = process_prefix
-        self._cached_config_params = {}
+        self._cached_config_params: dict[str, Any] = {}
         # used to determine if we need to connect the param tree or C++ params
         self._has_param_tree = param_tree
         self._has_process_params = process_params
