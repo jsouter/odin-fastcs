@@ -1,14 +1,10 @@
-import asyncio
 from argparse import ArgumentParser
-from typing import Any
 
 from eiger_fastcs.eiger_controller import EigerController
-from fastcs.backends.asyncio_backend import AsyncioBackend
 from fastcs.backends.epics.backend import EpicsBackend
 from fastcs.backends.epics.gui import EpicsGUIOptions
 from fastcs.backends.epics.ioc import EpicsIOCOptions
 from fastcs.connections.ip_connection import IPConnectionSettings
-from fastcs.controller import Controller
 from fastcs.mapping import Mapping
 
 from odin_fastcs.odin_controller import (
@@ -37,10 +33,6 @@ def get_controller() -> FPOdinController:
     eigercontv1 = EigerController("127.0.0.1", 8081)
     main_cont.register_sub_controller(eigercontv1)
 
-    # fpmerlin = OdinDetectorController("merlin", IPConnectionSettings("127.0.0.1", 8888))
-    # main_cont.register_sub_controller(fpmerlin)
-    # only displays one controller at a time... (whichever one gets registered first/last)
-    # return fpmerlin
     return main_cont
 
 

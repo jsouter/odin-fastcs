@@ -1,14 +1,15 @@
-from typing import List, Mapping, Optional, Tuple
+from collections.abc import Mapping
+
 from aiohttp import ClientResponse, ClientSession
 
 ValueType = bool | int | float | str
 JsonElementary = str | int | float | bool | None
-JsonType = JsonElementary | List[JsonElementary] | Mapping[str, JsonElementary]
+JsonType = JsonElementary | list[JsonElementary] | Mapping[str, JsonElementary]
 
 
 class HTTPConnection:
     def __init__(self, ip: str, port: int):
-        self._session: Optional[ClientSession] = None
+        self._session: ClientSession | None = None
         self._ip = ip
         self._port = port
 
@@ -56,7 +57,7 @@ class HTTPConnection:
         async with session.get(self.full_url(uri)) as response:
             return await response.json()
 
-    async def get_bytes(self, uri: str) -> Tuple[ClientResponse, bytes]:
+    async def get_bytes(self, uri: str) -> tuple[ClientResponse, bytes]:
         """Perform HTTP GET request and return response content as bytes.
 
         Args:

@@ -1,19 +1,20 @@
-from fastcs.connections.ip_connection import IPConnectionSettings
-from fastcs.attributes import AttrR, AttrRW, AttrW
-from fastcs.datatypes import Int, Float, Bool, String
-from dataclasses import dataclass
 import asyncio
-from fastcs.controller import Controller
-from typing import Any, Dict, List
-from odin_fastcs.http_connection import HTTPConnection
-from fastcs.wrappers import command, scan
 import logging
-from fastcs.attributes import Handler
+from dataclasses import dataclass
+from typing import Any
+
+from fastcs.attributes import AttrR, AttrRW, AttrW, Handler
+from fastcs.connections.ip_connection import IPConnectionSettings
+from fastcs.controller import Controller
+from fastcs.datatypes import Bool, Float, Int, String
+from fastcs.wrappers import command
+
+from odin_fastcs.http_connection import HTTPConnection
 from odin_fastcs.util import (
     get_by_path,
-    map_short_name_to_path_and_value,
-    is_not_dict,
     is_metadata_object,
+    is_not_dict,
+    map_short_name_to_path_and_value,
 )
 
 types = {"float": Float(), "int": Int(), "bool": Bool(), "str": String()}
@@ -26,7 +27,7 @@ class AdapterResponseError(Exception): ...
 class ParamTreeHandler(Handler):
     path: str
     update_period: float = 0.2
-    allowed_values: Dict[int, str] | None = None
+    allowed_values: dict[int, str] | None = None
 
     async def put(
         self,
@@ -76,7 +77,7 @@ class OdinController(Controller):
         param_tree: bool = False,
         process_params: bool = False,
     ):
-        super(OdinController, self).__init__()
+        super().__init__()
         self._ip_settings = settings
         self._api_prefix = api_prefix
         self._process_prefix = process_prefix
@@ -191,21 +192,21 @@ class OdinTopController(Controller):
 
 class FPOdinController(OdinController):
     def __init__(self, settings: IPConnectionSettings, api: str = "0.1"):
-        super(FPOdinController, self).__init__(
+        super().__init__(
             settings, f"api/{api}/fp", "FP", param_tree=True, process_params=True
         )
 
 
 class FROdinController(OdinController):
     def __init__(self, settings: IPConnectionSettings, api: str = "0.1"):
-        super(FROdinController, self).__init__(
+        super().__init__(
             settings, f"api/{api}/fr", "FR", param_tree=True, process_params=True
         )
 
 
 class MLOdinController(OdinController):
     def __init__(self, settings: IPConnectionSettings, api: str = "0.1"):
-        super(MLOdinController, self).__init__(
+        super().__init__(
             settings,
             f"api/{api}/meta_listener",
             "ML",
@@ -218,7 +219,7 @@ class OdinDetectorController(OdinController):
     def __init__(
         self, adapter_name: str, settings: IPConnectionSettings, api: str = "0.1"
     ):
-        super(OdinDetectorController, self).__init__(
+        super().__init__(
             settings,
             f"api/{api}/{adapter_name}",
             adapter_name.capitalize(),

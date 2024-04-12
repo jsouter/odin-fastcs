@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, List, Mapping, Tuple
+from collections.abc import Callable, Mapping
+from typing import Any
 
 Checker = Callable[[Any], bool]
 
@@ -18,7 +19,7 @@ def flatten_dict(
     separator: str = "/",
     prefix: str = "",
     value_checker: Checker = is_not_dict,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if not value_checker(dd):
         return {
             prefix + separator + k if prefix else k: v
@@ -30,7 +31,7 @@ def flatten_dict(
 
 
 def unflatten_dict(
-    dd: Dict[str, Any], separator: str = "/", reverse_indexing: bool = False
+    dd: dict[str, Any], separator: str = "/", reverse_indexing: bool = False
 ) -> Mapping[str, Any]:
     output: Mapping[str, Any] = {}
     for key, val in dd.items():
@@ -50,7 +51,7 @@ def unflatten_dict(
 
 def map_short_name_to_path_and_value(
     parameters: Mapping[str, Any], separator: str, value_checker: Checker = is_not_dict
-) -> Dict[str, Tuple[str, Any]]:
+) -> dict[str, tuple[str, Any]]:
     # flattens so that we end up with a dict with keys of api path and values of
     # required metadata needed to construct FastCS Attrs
     flattened = flatten_dict(parameters, separator, value_checker=value_checker)
@@ -60,12 +61,16 @@ def map_short_name_to_path_and_value(
 
     def get_name_mapping(
         tree: Mapping[str, Any],
-        name_parts: List[str] = [],
+        name_parts: list[str] = None,
         parts_needed: int = 1,
-        mapping: Dict[str, str] = {},
-    ) -> Dict[str, str]:
+        mapping: dict[str, str] = None,
+    ) -> dict[str, str]:
+        if mapping is None:
+            mapping = {}
+        if name_parts is None:
+            name_parts = []
         for part, subtree in tree.items():
-            name: List[str] = [part] + name_parts
+            name: list[str] = [part] + name_parts
             if value_checker(subtree):
                 full_name = separator.join(name)
                 short_name = "_".join(name[-parts_needed:])
@@ -83,7 +88,7 @@ def map_short_name_to_path_and_value(
                 )
         return mapping
 
-    output: Dict[str, Tuple[str, Any]] = {}
+    output: dict[str, tuple[str, Any]] = {}
     # there has to be a simpler way to do this...
     for full_name, short_name in get_name_mapping(inverse_tree).items():
         output[short_name] = (full_name, flattened.get(full_name))
