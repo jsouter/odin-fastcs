@@ -1,23 +1,25 @@
+import asyncio
 from argparse import ArgumentParser
+from typing import Any
 
+from eiger_fastcs.eiger_controller import EigerController
 from fastcs.backends.asyncio_backend import AsyncioBackend
 from fastcs.backends.epics.backend import EpicsBackend
+from fastcs.backends.epics.gui import EpicsGUIOptions
+from fastcs.backends.epics.ioc import EpicsIOCOptions
 from fastcs.connections.ip_connection import IPConnectionSettings
-import asyncio
-from typing import Any
-from fastcs.mapping import Mapping
 from fastcs.controller import Controller
-from . import __version__
+from fastcs.mapping import Mapping
+
 from odin_fastcs.odin_controller import (
     FPOdinController,
     FROdinController,
+    MLOdinController,
     OdinDetectorController,
     OdinTopController,
-    MLOdinController,
 )
-from fastcs.backends.epics.ioc import EpicsIOCOptions
-from fastcs.backends.epics.gui import EpicsGUIOptions
-from eiger_fastcs.eiger_controller import EigerController
+
+from . import __version__
 
 __all__ = ["main"]
 
