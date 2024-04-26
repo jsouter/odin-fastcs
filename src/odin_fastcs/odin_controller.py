@@ -7,17 +7,18 @@ from fastcs.attributes import AttrR, AttrRW, AttrW, Handler
 from fastcs.connections.ip_connection import IPConnectionSettings
 from fastcs.controller import Controller
 from fastcs.datatypes import Bool, Float, Int, String
+from fastcs.util import snake_to_pascal
 
 from odin_fastcs.http_connection import HTTPConnection
 from odin_fastcs.util import (
     create_odin_parameters,
     get_by_path,
-    tag_key_clashes,
 )
 
 types = {"float": Float(), "int": Int(), "bool": Bool(), "str": String()}
 
 REQUEST_METADATA_HEADER = {"Accept": "application/json;metadata=true"}
+IGNORED_ADAPTERS = ["od_fps", "od_frs", "od_mls"]
 
 
 class AdapterResponseError(Exception): ...
@@ -70,71 +71,53 @@ class OdinConfigurationHandler(Handler):
 
 
 class OdinController(Controller):
-
     def __init__(
         self,
-        settings: IPConnectionSettings,
+        connection: HTTPConnection,
+        param_tree: dict[str, Any],
         api_prefix: str,
         process_prefix: str,
-        param_tree: bool = False,
-        process_params: bool = False,
     ):
         super().__init__()
-        self._ip_settings = settings
+
+        self._connection = connection
+        self._param_tree = param_tree
         self._api_prefix = api_prefix
-        self._process_prefix = process_prefix
         self._path = process_prefix
-        self._cached_config_params: dict[str, Any] = {}
-        # used to determine if we need to connect the param tree or C++ params
-        self._has_param_tree = param_tree
-        self._has_process_params = process_params
-        asyncio.run(self.initialise())
 
-    async def initialise(self) -> None:
-        self._connection = HTTPConnection(self._ip_settings.ip, self._ip_settings.port)
-        self._connection.open()
-        if self._has_param_tree:
-            await self._connect_parameter_tree()
-        if self._has_process_params:
-            await self._connect_process_params()  # this will fail with merlin
-        await self._connection.close()
-
-    async def connect(self) -> None:
-        for controller in self.get_sub_controllers():
-            if isinstance(controller, OdinController):  # to satisfy mypy
-                await controller.connect()
-        self._connection.open()
-
-    async def _connect_parameter_tree(self):
-        response = await self._connection.get(
-            self._api_prefix, headers=REQUEST_METADATA_HEADER
-        )
-
-        parameters = create_odin_parameters(response)
-        tag_key_clashes(parameters)
+    async def _create_parameter_tree(self):
+        parameters = create_odin_parameters(self._param_tree)
 
         for parameter in parameters:
             if "writeable" in parameter.metadata and parameter.metadata["writeable"]:
                 attr_class = AttrRW
             else:
                 attr_class = AttrR
+
             if parameter.metadata["type"] not in types:
                 logging.warning(f"Could not handle parameter {parameter}")
                 # this is really something I should handle here
                 continue
+
             allowed = (
                 parameter.metadata["allowed_values"]
                 if "allowed_values" in parameter.metadata
                 else None
             )
+
+            if len(parameter.uri) >= 3:
+                group = snake_to_pascal(
+                    f"{parameter.uri[0].capitalize()}_{parameter.uri[1].capitalize()}"
+                )
+            else:
+                group = None
+
             attr = attr_class(
                 types[parameter.metadata["type"]],
                 handler=ParamTreeHandler(
-                    f"{self._api_prefix}/{parameter.uri}", allowed_values=allowed
+                    "/".join([self._api_prefix] + parameter.uri), allowed_values=allowed
                 ),
-                group=(
-                    f"{parameter.mode.capitalize()}{parameter.subsystem.capitalize()}"
-                ),
+                group=group,
             )
 
             setattr(self, parameter.name.replace(".", ""), attr)
@@ -145,10 +128,57 @@ class OdinTopController(Controller):
     Connects all sub controllers on connect
     """
 
+    API_PREFIX = "api/0.1"
+
+    def __init__(self, settings: IPConnectionSettings) -> None:
+        super().__init__()
+
+        self._connection = HTTPConnection(settings.ip, settings.port)
+
+        asyncio.run(self.initialise())
+
+    async def initialise(self) -> None:
+        self._connection.open()
+
+        adapters: list[str] = (
+            await self._connection.get(f"{self.API_PREFIX}/adapters")
+        )["adapters"]
+
+        for adapter in adapters:
+            if adapter in IGNORED_ADAPTERS:
+                continue
+
+            # Get full parameter tree and split into parameters at the root and under
+            # an index where there are N identical trees for each underlying process
+            response: dict[str, Any] = await self._connection.get(
+                f"{self.API_PREFIX}/{adapter}", headers=REQUEST_METADATA_HEADER
+            )
+            root_tree = {k: v for k, v in response.items() if not k.isdigit()}
+            indexed_trees = {k: v for k, v in response.items() if k.isdigit()}
+
+            odin_controller = OdinController(
+                self._connection,
+                root_tree,
+                f"{self.API_PREFIX}/{adapter}",
+                f"{adapter.upper()}",
+            )
+            await odin_controller._create_parameter_tree()
+            self.register_sub_controller(odin_controller)
+
+            for idx, tree in indexed_trees.items():
+                odin_controller = OdinController(
+                    self._connection,
+                    tree,
+                    f"{self.API_PREFIX}/{adapter}/{idx}",
+                    f"{adapter.upper()}{idx}",
+                )
+                await odin_controller._create_parameter_tree()
+                self.register_sub_controller(odin_controller)
+
+        await self._connection.close()
+
     async def connect(self) -> None:
-        for controller in self.get_sub_controllers():
-            if isinstance(controller, Controller):  # to satisfy mypy
-                await controller.connect()
+        self._connection.open()
 
 
 class FPOdinController(OdinController):
