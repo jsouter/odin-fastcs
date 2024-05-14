@@ -12,7 +12,6 @@ from fastcs.util import snake_to_pascal
 from odin_fastcs.http_connection import HTTPConnection
 from odin_fastcs.util import (
     create_odin_parameters,
-    get_by_path,
 )
 
 types = {"float": Float(), "int": Int(), "bool": Bool(), "str": String()}
@@ -57,17 +56,7 @@ class ParamTreeHandler(Handler):
             logging.error("Update loop failed for %s:\n%s", self.path, e)
 
 
-@dataclass
-class OdinConfigurationHandler(Handler):
-    path: str
-    update_period: float = 0.2
 
-    async def update(self, controller: Any, attr: AttrR[Any]) -> None:
-        try:
-            value = get_by_path(controller._cached_config_params, self.path)
-            await attr.set(value)
-        except Exception as e:
-            logging.error("Update loop failed for %s:\n%s", self.path, e)
 
 
 class OdinController(Controller):
