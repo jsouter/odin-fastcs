@@ -1,0 +1,20 @@
+layout {
+    pane size=1 borderless=true {
+        plugin location="zellij:tab-bar"
+    }
+    pane split_direction="vertical" {
+        pane split_direction="horizontal" {
+            pane command="/scratch/development/odin-fastcs/dev/stFrameReceiver1.sh"
+            pane command="/scratch/development/odin-fastcs/dev/stFrameProcessor1.sh"
+            pane command="/scratch/development/odin-fastcs/dev/stMetaWriter.sh"
+        }
+        pane split_direction="horizontal" {
+            pane command="/scratch/development/odin-fastcs/dev/stOdinServer.sh" start_suspended=true
+        }
+    }
+    pane size=2 borderless=true {
+        plugin location="zellij:status-bar"
+    }
+}
+seasion_name "ODIN-FASTCS"
+attach_to_session true
