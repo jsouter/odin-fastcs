@@ -1,7 +1,9 @@
+from pathlib import Path
 from typing import Optional
 
 import typer
 from fastcs.backends.asyncio_backend import AsyncioBackend
+from fastcs.backends.epics.gui import EpicsGUIOptions
 from fastcs.connections.ip_connection import IPConnectionSettings
 from fastcs.mapping import Mapping
 
@@ -45,7 +47,7 @@ def ioc(pv_prefix: str = typer.Argument()):
     mapping = get_controller_mapping()
 
     backend = EpicsBackend(mapping, pv_prefix)
-    backend.create_gui()
+    backend.create_gui(options=EpicsGUIOptions(output_path=Path.cwd() / "odin.bob"))
     backend.get_ioc().run()
 
 
