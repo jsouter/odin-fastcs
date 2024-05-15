@@ -4,7 +4,7 @@ from aiohttp import ClientResponse, ClientSession
 
 ValueType = bool | int | float | str
 JsonElementary = str | int | float | bool | None
-JsonType = JsonElementary | list[JsonElementary] | Mapping[str, JsonElementary]
+JsonType = JsonElementary | list["JsonType"] | Mapping[str, "JsonType"]
 
 
 class HTTPConnection:
@@ -44,7 +44,7 @@ class HTTPConnection:
 
         raise ConnectionRefusedError("Session is not open")
 
-    async def get(self, uri: str, headers: dict | None = None) -> JsonType:
+    async def get(self, uri: str, headers: dict | None = None) -> dict[str, JsonType]:
         """Perform HTTP GET request and return response content as JSON.
 
         Args:
@@ -55,7 +55,11 @@ class HTTPConnection:
         """
         session = self.get_session()
         async with session.get(self.full_url(uri), headers=headers) as response:
-            return await response.json()
+            match await response.json():
+                case dict() as d:
+                    return d
+                case _:
+                    raise ValueError(f"Got unexpected response:\n{response}")
 
     async def get_bytes(self, uri: str) -> tuple[ClientResponse, bytes]:
         """Perform HTTP GET request and return response content as bytes.

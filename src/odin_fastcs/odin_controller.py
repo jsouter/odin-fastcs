@@ -1,11 +1,12 @@
 import asyncio
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from fastcs.attributes import AttrR, AttrRW, AttrW, Handler
 from fastcs.connections.ip_connection import IPConnectionSettings
-from fastcs.controller import Controller
+from fastcs.controller import Controller, SubController
 from fastcs.datatypes import Bool, Float, Int, String
 from fastcs.util import snake_to_pascal
 
@@ -31,48 +32,50 @@ class ParamTreeHandler(Handler):
 
     async def put(
         self,
-        controller: Any,
+        controller: "OdinController",
         attr: AttrW[Any],
         value: Any,
     ) -> None:
         try:
             response = await controller._connection.put(self.path, value)
-            if "error" in response:
-                raise AdapterResponseError(response["error"])
+            match response:
+                case {"error": error}:
+                    raise AdapterResponseError(error)
         except Exception as e:
             logging.error("Update loop failed for %s:\n%s", self.path, e)
 
     async def update(
         self,
-        controller: Any,
+        controller: "OdinController",
         attr: AttrR[Any],
     ) -> None:
         try:
             response = await controller._connection.get(self.path)
-            # TODO: Don't like this...
-            value = response[self.path.split("/")[-1]]
+
+            # TODO: This would be nicer if the key was 'value' so we could match
+            parameter = self.path.split("/")[-1]
+            value = response.get(parameter, None)
+            if value is None:
+                raise ValueError(f"{parameter} not found in response:\n{response}")
+
             await attr.set(value)
         except Exception as e:
             logging.error("Update loop failed for %s:\n%s", self.path, e)
 
 
-
-
-
-class OdinController(Controller):
+class OdinController(SubController):
     def __init__(
         self,
         connection: HTTPConnection,
-        param_tree: dict[str, Any],
+        param_tree: Mapping[str, Any],
         api_prefix: str,
         process_prefix: str,
     ):
-        super().__init__()
+        super().__init__(process_prefix)
 
         self._connection = connection
         self._param_tree = param_tree
         self._api_prefix = api_prefix
-        self._path = process_prefix
 
     async def _create_parameter_tree(self):
         parameters = create_odin_parameters(self._param_tree)
@@ -129,9 +132,16 @@ class OdinTopController(Controller):
     async def initialise(self) -> None:
         self._connection.open()
 
-        adapters: list[str] = (
-            await self._connection.get(f"{self.API_PREFIX}/adapters")
-        )["adapters"]
+        adapters_response = await self._connection.get(f"{self.API_PREFIX}/adapters")
+        match adapters_response:
+            case {"adapters": [*adapter_list]}:
+                adapters = tuple(a for a in adapter_list if isinstance(a, str))
+                if len(adapters) != len(adapter_list):
+                    raise ValueError(f"Received invalid adapters list:\n{adapter_list}")
+            case _:
+                raise ValueError(
+                    f"Did not find valid adapters in response:\n{adapters_response}"
+                )
 
         for adapter in adapters:
             if adapter in IGNORED_ADAPTERS:
@@ -139,11 +149,16 @@ class OdinTopController(Controller):
 
             # Get full parameter tree and split into parameters at the root and under
             # an index where there are N identical trees for each underlying process
-            response: dict[str, Any] = await self._connection.get(
+            response = await self._connection.get(
                 f"{self.API_PREFIX}/{adapter}", headers=REQUEST_METADATA_HEADER
             )
+            assert isinstance(response, Mapping)
             root_tree = {k: v for k, v in response.items() if not k.isdigit()}
-            indexed_trees = {k: v for k, v in response.items() if k.isdigit()}
+            indexed_trees = {
+                k: v
+                for k, v in response.items()
+                if k.isdigit() and isinstance(v, Mapping)
+            }
 
             odin_controller = OdinController(
                 self._connection,
@@ -171,38 +186,45 @@ class OdinTopController(Controller):
 
 
 class FPOdinController(OdinController):
-    def __init__(self, settings: IPConnectionSettings, api: str = "0.1"):
+    def __init__(
+        self,
+        connection: HTTPConnection,
+        param_tree: Mapping[str, Any],
+        api: str = "0.1",
+    ):
         super().__init__(
-            settings, f"api/{api}/fp", "FP", param_tree=True, process_params=False
+            connection,
+            param_tree,
+            f"api/{api}/fp",
+            "FP",
         )
 
 
 class FROdinController(OdinController):
-    def __init__(self, settings: IPConnectionSettings, api: str = "0.1"):
+    def __init__(
+        self,
+        connection: HTTPConnection,
+        param_tree: Mapping[str, Any],
+        api: str = "0.1",
+    ):
         super().__init__(
-            settings, f"api/{api}/fr", "FR", param_tree=True, process_params=True
+            connection,
+            param_tree,
+            f"api/{api}/fr",
+            "FR",
         )
 
 
 class MLOdinController(OdinController):
-    def __init__(self, settings: IPConnectionSettings, api: str = "0.1"):
-        super().__init__(
-            settings,
-            f"api/{api}/meta_listener",
-            "ML",
-            param_tree=True,
-            process_params=False,
-        )
-
-
-class OdinDetectorController(OdinController):
     def __init__(
-        self, adapter_name: str, settings: IPConnectionSettings, api: str = "0.1"
+        self,
+        connection: HTTPConnection,
+        param_tree: Mapping[str, Any],
+        api: str = "0.1",
     ):
         super().__init__(
-            settings,
-            f"api/{api}/{adapter_name}",
-            adapter_name.capitalize(),
-            param_tree=True,
-            process_params=False,
+            connection,
+            param_tree,
+            f"api/{api}/meta_listener",
+            "ML",
         )

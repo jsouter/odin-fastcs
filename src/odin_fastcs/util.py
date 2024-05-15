@@ -9,7 +9,7 @@ def is_metadata_object(v: Any) -> bool:
 
 @dataclass
 class OdinParameter:
-    uri: str
+    uri: list[str]
     """Full URI."""
     metadata: dict[str, Any]
     """JSON response from GET of parameter."""
@@ -32,12 +32,12 @@ def create_odin_parameters(metadata: Mapping[str, Any]) -> list[OdinParameter]:
     """
     return [
         OdinParameter(uri=uri, metadata=metadata)
-        for uri, metadata in _walk_odin_metadata(metadata)
+        for uri, metadata in _walk_odin_metadata(metadata, [])
     ]
 
 
 def _walk_odin_metadata(
-    tree: dict[str, Any], path: str = None
+    tree: Mapping[str, Any], path: list[str]
 ) -> Iterator[tuple[list[str], dict[str, Any]]]:
     """Walk through tree and yield the leaves and their paths.
 
@@ -49,7 +49,6 @@ def _walk_odin_metadata(
         (path to leaf, value of leaf)
 
     """
-    path = path or []
     for node_name, node_value in tree.items():
         if node_name:
             node_path = path + [node_name]
@@ -96,20 +95,3 @@ def infer_metadata(parameter: int | float | bool | str, uri: list[str]):
         "type": type(parameter).__name__,
         "writeable": "config" in uri,
     }
-
-
-def tag_key_clashes(parameters: list[OdinParameter]):
-    """Find key clashes between subsystems and tag parameters to use extended name.
-
-    Modifies list of parameters in place.
-
-    Args:
-        parameters: Parameters to search
-
-    """
-    for idx, parameter in enumerate(parameters):
-        for other in parameters[idx + 1 :]:
-            if parameter.key == other.key:
-                parameter.has_unique_key = False
-                other.has_unique_key = False
-                break
