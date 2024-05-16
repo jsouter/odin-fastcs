@@ -3,7 +3,7 @@
     "frame_ready_endpoint": "tcp://127.0.0.1:10001",
     "frame_release_endpoint": "tcp://127.0.0.1:10002",
     "decoder_type": "DummyUDP",
-    "decoder_path": "/scratch/development/odin/odin-data/vscode_prefix//lib",
+    "decoder_path": "<ODIN_DATA>/lib",
     "rx_ports": "61649",
     "max_buffer_mem": 840000000,
     "decoder_config": {
