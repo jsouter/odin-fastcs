@@ -1,0 +1,2 @@
+git+https://github.com/odin-detector/odin-control@param-tree-replace
+git+https://github.com/odin-detector/odin-data@fastcs-dev#subdirectory=python

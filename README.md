@@ -31,13 +31,13 @@ installed. This will populate the dev config with your environment - these chang
 should not be checked in. The dev deployment can then be run with `dev/start.sh`.
 
 Currently Odin FastCS depends on branches of both odin-control and odin-data, so these
-branches are provided as dev dependencies for convenience. Make a Python>=3.11 venv
-and then `pip install -e .[dev]` will give an environment that the control server and
-meta writer can run in. For the frameProcessor and frameReceiver, check out the
+branches are provided in `dev/requirements.txt` for convenience. Make a venv and then
+`pip install -r dev/requirements.txt` will give an environment that the control server
+and meta writer can run in. For the frameProcessor and frameReceiver, check out the
 fastcs-dev branch of odin-data and build. It is recommended to use the vscode CMake
 configuration to do this.
 
-If you need to run a local version of any of the applications, stop that process in the
+If you need to run a dev version of any of the applications, stop that process in the
 deployment and run/debug it manually. There is a vscode launch config for an odin server
 using the same config as the dev deployment for this purpose.
 
