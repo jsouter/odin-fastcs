@@ -11,7 +11,7 @@
       "load": {
         "index": "dummy",
         "name": "DummyUDPProcessPlugin",
-        "library": "/scratch/development/odin/odin-data/vscode_prefix//lib/libDummyUDPProcessPlugin.so"
+        "library": "<ODIN_DATA>/lib/libDummyUDPProcessPlugin.so"
       }
     }
   },
@@ -20,7 +20,7 @@
       "load": {
         "index": "offset",
         "name": "OffsetAdjustmentPlugin",
-        "library": "/scratch/development/odin/odin-data/vscode_prefix//lib/libOffsetAdjustmentPlugin.so"
+        "library": "<ODIN_DATA>/lib/libOffsetAdjustmentPlugin.so"
       }
     }
   },
@@ -29,7 +29,7 @@
       "load": {
         "index": "param",
         "name": "ParameterAdjustmentPlugin",
-        "library": "/scratch/development/odin/odin-data/vscode_prefix//lib/libParameterAdjustmentPlugin.so"
+        "library": "<ODIN_DATA>/lib/libParameterAdjustmentPlugin.so"
       }
     }
   },
@@ -38,7 +38,7 @@
       "load": {
         "index": "hdf",
         "name": "FileWriterPlugin",
-        "library": "/scratch/development/odin/odin-data/vscode_prefix//lib/libHdf5Plugin.so"
+        "library": "<ODIN_DATA>/lib/libHdf5Plugin.so"
       }
     }
   },
