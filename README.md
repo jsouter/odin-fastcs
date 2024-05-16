@@ -20,11 +20,12 @@ Odin FastCS does not do much unless it has an Odin control server to talk to. It
 possible to test some functionality in isolation by dumping server responses and creating
 tests that parse those responses. Responses can be dumped from various Odin systems and
 tests written against them that can run in CI to ensure support for those systems is not
-broken. The `tests/dump_server_response.py` helper script will generate json files for
-each adapter in an Odin server to write tests against.
+broken (or that the adapters need to be updated). The `tests/dump_server_response.py`
+helper script will generate json files for each adapter in an Odin server to write tests
+against.
 
 Testing against static files is quite restrictive, so a dummy development environment is
-provided to give developers a consistent live deployment to possible to work against
+provided to give developers as consistent live deployment as possible to work against
 while developing the code. To set this up, run `dev/configure.sh` with the path to an
 odin-data install prefix and the path to a venv with odin-control and odin-data
 installed. This will populate the dev config with your environment - these changes
@@ -39,7 +40,9 @@ configuration to do this.
 
 If you need to run a dev version of any of the applications, stop that process in the
 deployment and run/debug it manually. There is a vscode launch config for an odin server
-using the same config as the dev deployment for this purpose.
+using the same config as the dev deployment for this purpose. For the python processes
+it is convenient to `pip install -r dev/requirements.txt` inside the container as well
+to make use of the launch configs.
 
 At boot time, FastCS will generate UIs that can be opened in Phoebus. This is the
 clearest way to see the PVs that have been generated for the Odin server. It is also
