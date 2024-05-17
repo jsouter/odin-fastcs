@@ -71,3 +71,6 @@ lockfiles/
 
 # FastCS bob files
 *.bob
+
+# Local dev deployment
+dev/local/
