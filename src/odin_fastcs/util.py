@@ -19,6 +19,9 @@ class OdinParameter:
         """Unique name of parameter."""
         return "_".join(self.uri)
 
+    def __hash__(self):
+        return hash(tuple(self.uri))
+
 
 def create_odin_parameters(metadata: Mapping[str, Any]) -> list[OdinParameter]:
     """Walk metadata and create parameters for the leaves, flattening path with '/'s.

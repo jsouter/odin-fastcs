@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import re
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -11,9 +13,7 @@ from fastcs.datatypes import Bool, Float, Int, String
 from fastcs.util import snake_to_pascal
 
 from odin_fastcs.http_connection import HTTPConnection
-from odin_fastcs.util import (
-    create_odin_parameters,
-)
+from odin_fastcs.util import OdinParameter, create_odin_parameters
 
 types = {"float": Float(), "int": Int(), "bool": Bool(), "str": String()}
 
@@ -79,8 +79,10 @@ class OdinController(SubController):
 
     async def _create_parameter_tree(self):
         parameters = create_odin_parameters(self._param_tree)
+        short_names = self._get_short_names(parameters)
 
         for parameter in parameters:
+            name = short_names[parameter].replace(".", "")
             if "writeable" in parameter.metadata and parameter.metadata["writeable"]:
                 attr_class = AttrRW
             else:
@@ -112,7 +114,41 @@ class OdinController(SubController):
                 group=group,
             )
 
-            setattr(self, parameter.name.replace(".", ""), attr)
+            setattr(self, name, attr)
+
+    def _get_short_names(
+        self, parameters: list[OdinParameter]
+    ) -> Mapping[OdinParameter, str]:
+        output_names = {parameter: "" for parameter in parameters}
+        rank = 0
+        while True:
+            rank += 1
+            suffixes = {
+                parameter: "_".join(parameter.uri[-rank:])
+                for parameter in parameters
+                if not output_names[parameter]
+            }
+            collisions = [
+                name
+                for name, count in Counter(list(suffixes.values())).items()
+                if count > 1
+            ]
+            for parameter, suffix in suffixes.items():
+                if suffix not in collisions:
+                    # if controller already has an attribute with this name
+                    # or if parameter name doesn't start with a letter
+                    if hasattr(self, suffix) or not re.match(r"^[a-zA-Z]+", suffix):
+                        if rank == len(parameter.uri):
+                            raise KeyError(
+                                "Could not create a valid short"
+                                f" name for parameter {parameter.name}"
+                            )
+                        # attempt to go one level higher to avoid collision
+                        continue
+                    output_names[parameter] = suffix
+            if "" not in output_names.values():
+                break
+        return output_names
 
 
 class OdinTopController(Controller):
